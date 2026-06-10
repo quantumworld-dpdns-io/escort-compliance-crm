@@ -1,4 +1,4 @@
-module github.com/quantumworld-dpdns-io/escort-compliance-crm/services/credentials
+module github.com/quantumworld-dpdns-io/escort-compliance-crm/services/payments
 
 go 1.22
 
