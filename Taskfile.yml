@@ -1,0 +1,82 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build-all:
+    desc: Build all services
+    cmds:
+      - make build-all
+
+  test-all:
+    desc: Run all tests
+    cmds:
+      - make test-all
+
+  lint-all:
+    desc: Run all linters
+    cmds:
+      - make lint-all
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - make clean
+
+  docker-build:
+    desc: Build Docker images
+    cmds:
+      - make docker-build
+
+  docker-up:
+    desc: Start all services with Docker Compose
+    cmds:
+      - docker-compose up -d
+
+  docker-down:
+    desc: Stop all services
+    cmds:
+      - docker-compose down
+
+  dev-setup:
+    desc: Setup development environment
+    cmds:
+      - make dev-setup
+
+  gen-proto:
+    desc: Generate protobuf code
+    cmds:
+      - ./scripts/gen-proto.sh
+
+  migrate:
+    desc: Run database migrations
+    cmds:
+      - ./scripts/migrate.sh
+
+  seed:
+    desc: Seed database with test data
+    cmds:
+      - ./scripts/seed.sh
+
+  test-robot:
+    desc: Run Robot Framework E2E tests
+    cmds:
+      - make test-robot
+
+  test-security:
+    desc: Run OWASP security tests
+    cmds:
+      - make test-security
+
+  deploy-staging:
+    desc: Deploy to staging
+    cmds:
+      - ./scripts/deploy/staging.sh
+
+  deploy-production:
+    desc: Deploy to production
+    cmds:
+      - ./scripts/deploy/production.sh

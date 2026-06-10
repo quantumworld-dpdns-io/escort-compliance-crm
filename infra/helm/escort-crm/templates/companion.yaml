@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-companion
+  labels:
+    app: companion
+spec:
+  replicas: {{ .Values.replicaCount.companion | default 1 }}
+  selector:
+    matchLabels:
+      app: companion
+  template:
+    metadata:
+      labels:
+        app: companion
+    spec:
+      containers:
+      - name: companion
+        image: "{{ .Values.image.repository }}/companion:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: 8082
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10

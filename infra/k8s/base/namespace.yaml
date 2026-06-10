@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: escort-crm
+  labels:
+    app.kubernetes.io/name: escort-crm
+    app.kubernetes.io/part-of: escort-compliance-crm

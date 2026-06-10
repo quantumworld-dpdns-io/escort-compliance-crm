@@ -1,0 +1,13 @@
+go 1.22
+
+use (
+	./services/gateway
+	./services/auth
+	./services/companion
+	./services/booking
+	./services/compliance
+	./services/screening
+	./services/credentials
+	./services/shared
+	./services/quantum
+)

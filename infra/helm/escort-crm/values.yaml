@@ -1,0 +1,74 @@
+replicaCount:
+  gateway: 3
+  auth: 2
+  companion: 2
+  booking: 2
+  compliance: 2
+  screening: 2
+  credentials: 2
+  payments: 2
+  messaging: 2
+  realtime: 2
+  quantum: 1
+  ml: 1
+  data: 1
+  crypto: 1
+
+image:
+  repository: escort-crm
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  gatewayPort: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: api.escort-crm.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: escort-crm-tls
+      hosts:
+        - api.escort-crm.com
+
+resources:
+  gateway:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  auth:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: escort
+    database: escort_crm
+
+redis:
+  enabled: true
+
+config:
+  PQC_ENABLED: "true"
+  QUANTUM_OPT_ENABLED: "true"
+  QUANTUM_ML_ENABLED: "true"
+  REDIS_URL: "redis://redis-master:6379"
+
+secrets:
+  databaseUrl: "postgres://escort:escort@postgresql:5432/escort_crm"
+  jwtSecret: "change-me-in-production"

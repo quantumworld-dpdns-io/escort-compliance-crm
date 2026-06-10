@@ -6,17 +6,14 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
 
 # Build artifacts
 dist/
 build/
-target/
 __pycache__/
 *.pyc
 *.class
-bin/
+target/
 
 # Dependencies
 node_modules/
@@ -38,19 +35,13 @@ htmlcov/
 *.log
 logs/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# Secrets (never commit)
+# Secrets
 *.pem
 *.key
 *.cert
 *.p12
 *.pfx
 secrets.yaml
+
+# Auto-commit script
+auto_commit.sh

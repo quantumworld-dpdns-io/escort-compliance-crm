@@ -2,14 +2,196 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
     branches: [main]
 
 jobs:
-  build:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      node: ${{ steps.filter.outputs.node }}
+      python: ${{ steps.filter.outputs.python }}
+      rust: ${{ steps.filter.outputs.rust }}
+      julia: ${{ steps.filter.outputs.julia }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            go:
+              - 'services/shared/**'
+              - 'services/gateway/**'
+              - 'services/auth/**'
+              - 'services/companion/**'
+              - 'services/booking/**'
+              - 'services/compliance/**'
+              - 'services/screening/**'
+              - 'services/credentials/**'
+            node:
+              - 'services/payments/**'
+              - 'services/messaging/**'
+              - 'services/realtime/**'
+            python:
+              - 'services/ml/**'
+            rust:
+              - 'services/crypto/**'
+              - 'services/data/**'
+            julia:
+              - 'services/quantum/**'
+            frontend:
+              - 'frontend/**'
+            infra:
+              - 'infra/**'
+
+  ci-go:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Placeholder build step
-        run: echo "Add your build/test commands here"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Lint Go
+        uses: golangci/golangci-lint-action@v4
+        with:
+          working-directory: services/shared
+      - name: Test Go Shared
+        run: cd services/shared && go test -v -race -coverprofile=coverage.out ./...
+      - name: Test Go Gateway
+        run: cd services/gateway && go test -v -race -coverprofile=coverage.out ./...
+      - name: Test Go Auth
+        run: cd services/auth && go test -v -race -coverprofile=coverage.out ./...
+
+  ci-node:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.node == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install & Lint Payments
+        run: cd services/payments && npm ci && npm run lint
+      - name: Test Payments
+        run: cd services/payments && npm test
+      - name: Install & Lint Messaging
+        run: cd services/messaging && npm ci && npm run lint
+      - name: Test Messaging
+        run: cd services/messaging && npm test
+
+  ci-python:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Lint Python
+        run: cd services/ml && pip install ruff && ruff check src/ tests/
+      - name: Test Python
+        run: cd services/ml && pip install -e ".[dev]" && pytest tests/ -v
+
+  ci-rust:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Lint Rust Crypto
+        run: cd services/crypto && cargo clippy -- -D warnings
+      - name: Test Rust Crypto
+        run: cd services/crypto && cargo test
+      - name: Lint Rust Data
+        run: cd services/data && cargo clippy -- -D warnings
+      - name: Test Rust Data
+        run: cd services/data && cargo test
+
+  ci-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Frontend
+        run: cd frontend/web && npm ci
+      - name: Lint Frontend
+        run: cd frontend/web && npm run lint
+      - name: Test Frontend
+        run: cd frontend/web && npm test
+
+  ci-docker:
+    needs: [ci-go, ci-node, ci-python, ci-rust]
+    if: always() && !failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker images
+        run: docker-compose build
+
+  ci-robot:
+    needs: ci-docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Robot Framework
+        run: pip install robotframework robotframework-requests
+      - name: Start services
+        run: docker-compose up -d
+      - name: Wait for services
+        run: sleep 30
+      - name: Run Robot Framework tests
+        run: robot --outputdir test-results tests/e2e/suites/
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-results
+          path: test-results/
+
+  ci-security:
+    needs: ci-docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Robot Framework
+        run: pip install robotframework robotframework-requests
+      - name: Start services
+        run: docker-compose up -d
+      - name: Wait for services
+        run: sleep 30
+      - name: Run OWASP security tests
+        run: robot --outputdir test-results/security tests/security/suites/
+      - name: Upload security results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-results
+          path: test-results/security/
+
+  ci-helm:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint Helm chart
+        run: helm lint infra/helm/escort-crm/
+      - name: Template Helm chart
+        run: helm template escort-crm infra/helm/escort-crm/

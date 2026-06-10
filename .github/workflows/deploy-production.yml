@@ -1,0 +1,33 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Kubernetes (Production)
+        run: |
+          kubectl config use-context production
+          helm upgrade --install escort-crm infra/helm/escort-crm/ \
+            -f infra/helm/escort-crm/values-production.yaml \
+            --namespace escort-crm \
+            --create-namespace \
+            --atomic \
+            --timeout 10m
+
+      - name: Health check
+        run: |
+          sleep 120
+          curl -sf https://api.escort-crm.com/health || exit 1
+
+      - name: Run full test suite
+        run: |
+          pip install robotframework robotframework-requests
+          robot --outputdir test-results tests/e2e/suites/ tests/security/suites/

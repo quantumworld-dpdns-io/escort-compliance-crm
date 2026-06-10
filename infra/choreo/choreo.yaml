@@ -1,0 +1,13 @@
+apiVersion: choreo.dev/v1alpha1
+kind: Project
+metadata:
+  name: escort-compliance-crm
+  description: Escort Compliance CRM with Quantum Computing
+spec:
+  build:
+    tool: docker
+  deploy:
+    target: kubernetes
+  repository:
+    url: https://github.com/quantumworld-dpdns-io/escort-compliance-crm
+    branch: main

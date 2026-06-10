@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-screening
+  labels:
+    app: screening
+spec:
+  replicas: {{ .Values.replicaCount.screening | default 1 }}
+  selector:
+    matchLabels:
+      app: screening
+  template:
+    metadata:
+      labels:
+        app: screening
+    spec:
+      containers:
+      - name: screening
+        image: "{{ .Values.image.repository }}/screening:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: 8085
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10

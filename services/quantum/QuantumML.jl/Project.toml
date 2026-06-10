@@ -1,0 +1,23 @@
+name = "QuantumML"
+uuid = "escort-crm-quantum-ml-0000-0000-000000000002"
+version = "0.1.0"
+
+[deps]
+Yao = "0.8"
+YaoExtensions = "0.6"
+Flux = "0.14"
+MLJBase = "0.21"
+MLJ = "0.19"
+LinearAlgebra = "1"
+Statistics = "1"
+HTTP = "1.10"
+JSON3 = "1"
+StructTypes = "1"
+Configurations = "0.17"
+Distributions = "0.25"
+StatsBase = "0.34"
+Random = "1.9"
+Serialization = "1.9"
+
+[compat]
+julia = "1.10"

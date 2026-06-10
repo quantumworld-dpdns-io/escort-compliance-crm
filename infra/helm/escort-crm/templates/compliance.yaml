@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-compliance
+  labels:
+    app: compliance
+spec:
+  replicas: {{ .Values.replicaCount.compliance | default 1 }}
+  selector:
+    matchLabels:
+      app: compliance
+  template:
+    metadata:
+      labels:
+        app: compliance
+    spec:
+      containers:
+      - name: compliance
+        image: "{{ .Values.image.repository }}/compliance:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: 8084
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10

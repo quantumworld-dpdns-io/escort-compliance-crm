@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: escort-config
+  namespace: escort-crm
+data:
+  REDIS_URL: "redis://redis:6379"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+  PQC_ENABLED: "true"
+  QUANTUM_OPT_ENABLED: "true"
+  QUANTUM_ML_ENABLED: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: escort-secrets
+  namespace: escort-crm
+type: Opaque
+stringData:
+  database-url: "postgres://escort:escort@postgres:5432/escort_crm"
+  jwt-secret: "change-me-in-production"
+  stripe-secret: ""
+  openai-key: ""
