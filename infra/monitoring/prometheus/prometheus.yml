@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:8080']
+    metrics_path: /metrics
+
+  - job_name: 'auth'
+    static_configs:
+      - targets: ['auth:8081']
+    metrics_path: /metrics
+
+  - job_name: 'companion'
+    static_configs:
+      - targets: ['companion:8082']
+    metrics_path: /metrics
+
+  - job_name: 'quantum'
+    static_configs:
+      - targets: ['quantum:8090']
+    metrics_path: /metrics
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:8080']
+    metrics_path: /nginx_status
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
