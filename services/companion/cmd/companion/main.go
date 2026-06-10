@@ -1,48 +1,50 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"net/http"
+	"log"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/companion/internal/companion/handler"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/companion/internal/companion/repository"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/companion/internal/companion/service"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/companion/internal/companion/router"
 	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/shared/pkg/config"
-	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/shared/pkg/logging"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/shared/pkg/database"
 )
 
 func main() {
-	log := logging.New("companion")
-	log.Info().Msg("Starting Companion Service")
+	cfg := config.Load()
 
-	cfg, err := config.Load()
+	db, err := database.NewPostgres(database.PostgresConfig{URL: cfg.DatabaseURL})
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to load config")
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
+	defer db.Close()
 
-	router := setupCompanionRouter(cfg, log)
+	repo := repository.New(db)
+	svc := service.New(repo)
+	h := handler.New(svc)
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, 8082),
-		Handler:      router,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-	}
-
-	go func() {
-		log.Info().Msg("Server listening on :8082")
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("Server failed")
+	r := gin.Default()
+	r.GET("/healthz", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
+	r.GET("/readyz", func(c *gin.Context) {
+		if err := db.Ping(); err != nil {
+			c.JSON(503, gin.H{"status": "not ready"})
+			return
 		}
-	}()
+		c.JSON(200, gin.H{"status": "ready"})
+	})
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	router.RegisterRoutes(r, h)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	srv.Shutdown(ctx)
+	port := cfg.Port
+	if port == "" {
+		port = "8082"
+	}
+	fmt.Printf("Companion service starting on port %s\n", port)
+	if err := r.Run(":" + port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
