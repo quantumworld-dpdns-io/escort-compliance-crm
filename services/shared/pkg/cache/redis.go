@@ -37,7 +37,7 @@ func New(cfg CacheConfig) (*Cache, error) {
 }
 
 func (c *Cache) Get(ctx context.Context, key string) (string, error) {
-	return c.client.Get(ctx).Result()
+	return c.client.Get(ctx, key).Result()
 }
 
 func (c *Cache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
