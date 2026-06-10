@@ -1,0 +1,21 @@
+name = "QuantumOpt"
+uuid = "escort-crm-quantum-opt-0000-0000-000000000001"
+version = "0.1.0"
+
+[deps]
+Yao = "0.8"
+YaoExtensions = "0.6"
+Optim = "1.9"
+JuMP = "1.22"
+LinearAlgebra = "1"
+Statistics = "1"
+HTTP = "1.10"
+JSON3 = "1"
+StructTypes = "1"
+Configurations = "0.17"
+Distributions = "0.25"
+StatsBase = "0.34"
+Random = "1.9"
+
+[compat]
+julia = "1.10"
