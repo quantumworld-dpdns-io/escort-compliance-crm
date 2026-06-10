@@ -1,84 +1,157 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+      tag:
+        description: 'Git tag for release'
+        required: true
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
 
 jobs:
-  release:
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Generate changelog
-        id: changelog
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: notes } = await github.rest.repos.generateReleaseNotes({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: context.ref.replace('refs/tags/', ''),
-              target_commitish: 'main'
-            });
-            return notes.body;
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          body: ${{ steps.changelog.outputs.result }}
-          generate_release_notes: true
-
-  docker-release:
-    needs: release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    
     strategy:
       matrix:
-        service: [gateway, auth, companion, booking, compliance, screening, credentials, payments, messaging, realtime, quantum, ml, data, crypto]
+        service:
+          - name: gateway
+            language: go
+            dockerfile: services/gateway/Dockerfile
+          - name: auth
+            language: go
+            dockerfile: services/auth/Dockerfile
+          - name: companion
+            language: go
+            dockerfile: services/companion/Dockerfile
+          - name: booking
+            language: go
+            dockerfile: services/booking/Dockerfile
+          - name: compliance
+            language: go
+            dockerfile: services/compliance/Dockerfile
+          - name: screening
+            language: go
+            dockerfile: services/screening/Dockerfile
+          - name: credentials
+            language: go
+            dockerfile: services/credentials/Dockerfile
+          - name: payments
+            language: node
+            dockerfile: services/payments/Dockerfile
+          - name: messaging
+            language: node
+            dockerfile: services/messaging/Dockerfile
+          - name: realtime
+            language: node
+            dockerfile: services/realtime/Dockerfile
+          - name: ml
+            language: python
+            dockerfile: services/ml/Dockerfile
+          - name: quantum
+            language: go
+            dockerfile: services/quantum/Dockerfile
+          - name: crypto
+            language: rust
+            dockerfile: services/crypto/Dockerfile
+          - name: data
+            language: rust
+            dockerfile: services/data/Dockerfile
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Login to GHCR
+
+      - name: Log in to Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-      - name: Build and push
+            type=semver,pattern={{version}},value=${{ inputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: services/${{ matrix.service }}
+          context: .
+          file: ${{ matrix.service.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  helm-release:
+  release:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: Release ${{ inputs.version }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-staging:
     needs: release
     runs-on: ubuntu-latest
+    environment: staging
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Package Helm chart
-        run: helm package infra/helm/escort-crm/
-      - name: Push to OCI registry
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
         run: |
-          helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-          helm push escort-crm-*.tgz oci://ghcr.io/${{ github.repository }}/helm
+          echo "Deploying ${{ inputs.version }} to staging..."
+          echo "Would run: helm upgrade escort-crm ./infra/helm/escort-crm --set image.tag=${{ inputs.version }}"
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying ${{ inputs.version }} to production..."
+          echo "Would run: helm upgrade escort-crm ./infra/helm/escort-crm --set image.tag=${{ inputs.version }} -n production"
