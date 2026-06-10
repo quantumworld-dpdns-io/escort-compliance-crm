@@ -1,49 +1,73 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"net/http"
+	"log"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/auth/internal/auth/handler"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/auth/internal/auth/repository"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/auth/internal/auth/service"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/auth/internal/auth/router"
 	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/shared/pkg/config"
-	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/shared/pkg/logging"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/shared/pkg/cache"
+	"github.com/quantumworld-dpdns-io/escort-compliance-crm/services/shared/pkg/database"
 )
 
 func main() {
-	log := logging.New("auth")
-	log.Info().Msg("Starting Auth Service")
+	cfg := config.Load()
 
-	cfg, err := config.Load()
+	db, err := database.NewPostgres(database.PostgresConfig{
+		URL: cfg.DatabaseURL,
+	})
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to load config")
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	redisCache, err := cache.New(cache.CacheConfig{
+		URL: cfg.RedisURL,
+	})
+	if err != nil {
+		log.Printf("Warning: Redis unavailable, running without cache: %v", err)
+	} else {
+		defer redisCache.Close()
 	}
 
-	router := setupAuthRouter(cfg, log)
-
-	srv := &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, 8081),
-		Handler:      router,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = cfg.JWTSecret
+	}
+	if jwtSecret == "" {
+		jwtSecret = "dev-secret-change-in-production"
 	}
 
-	go func() {
-		log.Info().Msg("Server listening on :8081")
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("Server failed")
+	repo := repository.New(db)
+	svc := service.New(repo, redisCache, jwtSecret)
+	h := handler.New(svc)
+
+	r := gin.Default()
+	r.GET("/healthz", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+	r.GET("/readyz", func(c *gin.Context) {
+		if err := db.Ping(); err != nil {
+			c.JSON(503, gin.H{"status": "not ready"})
+			return
 		}
-	}()
+		c.JSON(200, gin.H{"status": "ready"})
+	})
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	router.RegisterRoutes(r, h)
 
-	log.Info().Msg("Shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	srv.Shutdown(ctx)
+	port := cfg.Port
+	if port == "" {
+		port = "8081"
+	}
+
+	fmt.Printf("Auth service starting on port %s\n", port)
+	if err := r.Run(":" + port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
