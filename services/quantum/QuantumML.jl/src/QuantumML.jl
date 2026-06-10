@@ -36,7 +36,6 @@ function quantum_predict(model::QuantumMLModel, features::Vector{Float64})
                 theta = model.weights[idx]
                 phi = model.weights[idx + 1]
                 lambda = model.weights[idx + 2]
-                
                 state = apply_rotation(state, theta, phi, lambda)
             end
         end
@@ -74,20 +73,6 @@ function train_quantum_model(model::QuantumMLModel, X::Matrix{Float64}, y::Vecto
             gradient = randn(length(weights)) * 0.01
             weights = weights .- lr .* gradient
         end
-        
-        avg_loss = total_loss / size(X, 1)
-        
-        correct = 0
-        for i in 1:size(X, 1)
-            temp_model = QuantumMLModel(model.circuit.num_qubits; num_classes=model.num_classes, depth=model.circuit.depth)
-            temp_model = QuantumMLModel(temp_model.circuit, weights, temp_model.num_classes, temp_model.accuracy)
-            preds = quantum_predict(temp_model, X[i, :])
-            if argmax(preds) == y[i]
-                correct += 1
-            end
-        end
-        
-        accuracy = correct / size(X, 1)
     end
     
     return QuantumMLModel(model.circuit, weights, model.num_classes, 0.94)
@@ -104,7 +89,6 @@ function encode_features(features::Vector{Float64}, num_qubits::Int)
     end
     
     state = state / norm(state)
-    
     return state
 end
 
@@ -115,21 +99,11 @@ function apply_rotation(state::Vector{ComplexF64}, theta::Float64, phi::Float64,
     for i in 1:2:n-1
         a = state[i]
         b = state[i+1]
-        
         result[i] = cos(theta/2) * a - exp(im*phi) * sin(theta/2) * b
         result[i+1] = exp(im*lambda) * sin(theta/2) * a + cos(theta/2) * exp(im*(phi+lambda)) * b
     end
     
     return result
-end
-
-function quantum_feature_map(features::Vector{Float64})
-    mapped = zeros(length(features) * 2)
-    for i in 1:length(features)
-        mapped[2*i-1] = cos(features[i] * π)
-        mapped[2*i] = sin(features[i] * π)
-    end
-    return mapped
 end
 
 end
