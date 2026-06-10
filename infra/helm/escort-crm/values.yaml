@@ -1,74 +1,214 @@
-replicaCount:
-  gateway: 3
-  auth: 2
-  companion: 2
-  booking: 2
-  compliance: 2
-  screening: 2
-  credentials: 2
-  payments: 2
-  messaging: 2
-  realtime: 2
-  quantum: 1
-  ml: 1
-  data: 1
-  crypto: 1
-
-image:
-  repository: escort-crm
-  tag: latest
-  pullPolicy: IfNotPresent
-
-service:
-  type: ClusterIP
-  gatewayPort: 8080
-
-ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-  hosts:
-    - host: api.escort-crm.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: escort-crm-tls
-      hosts:
-        - api.escort-crm.com
-
-resources:
-  gateway:
+gateway:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
     requests:
-      memory: "128Mi"
-      cpu: "100m"
+      cpu: 250m
+      memory: 256Mi
     limits:
-      memory: "256Mi"
-      cpu: "500m"
-  auth:
-    requests:
-      memory: "128Mi"
-      cpu: "100m"
-    limits:
-      memory: "256Mi"
-      cpu: "500m"
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 75
 
-postgresql:
-  enabled: true
-  auth:
-    postgresPassword: escort
-    database: escort_crm
+auth:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-auth
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+companion:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-companion
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+booking:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-booking
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+compliance:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-compliance
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+screening:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-screening
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+credentials:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-credentials
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+payments:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-payments
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+messaging:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-messaging
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+realtime:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-realtime
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+ml:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-ml
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+quantum:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-quantum
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+data:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-data
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+crypto:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/quantumworld-dpdns-io/escort-compliance-crm-crypto
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+postgres:
+  host: postgres
+  port: 5432
+  database: escort_crm
+  secretName: escort-crm-secrets
 
 redis:
-  enabled: true
-
-config:
-  PQC_ENABLED: "true"
-  QUANTUM_OPT_ENABLED: "true"
-  QUANTUM_ML_ENABLED: "true"
-  REDIS_URL: "redis://redis-master:6379"
-
-secrets:
-  databaseUrl: "postgres://escort:escort@postgresql:5432/escort_crm"
-  jwtSecret: "change-me-in-production"
+  host: redis
+  port: 6379
+  secretName: escort-crm-secrets
