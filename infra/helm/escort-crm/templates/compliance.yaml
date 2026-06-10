@@ -1,40 +1,64 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "escort-crm.fullname" . }}-compliance
+  labels:
+    {{- include "escort-crm.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8084
+      targetPort: compliance
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "escort-crm.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: compliance
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-compliance
+  name: {{ include "escort-crm.fullname" . }}-compliance
   labels:
-    app: compliance
+    {{- include "escort-crm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: compliance
 spec:
-  replicas: {{ .Values.replicaCount.compliance | default 1 }}
+  replicas: {{ .Values.compliance.replicaCount }}
   selector:
     matchLabels:
-      app: compliance
+      {{- include "escort-crm.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: compliance
   template:
     metadata:
       labels:
-        app: compliance
+        {{- include "escort-crm.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: compliance
     spec:
       containers:
-      - name: compliance
-        image: "{{ .Values.image.repository }}/compliance:{{ .Values.image.tag }}"
-        ports:
-        - containerPort: 8084
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 15
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: compliance
+          image: "{{ .Values.compliance.image.repository }}:{{ .Values.compliance.image.tag }}"
+          imagePullPolicy: {{ .Values.compliance.image.pullPolicy }}
+          ports:
+            - name: compliance
+              containerPort: 8084
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: compliance
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: compliance
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "escort-crm.fullname" . }}-secrets
+                  key: database-url
+          resources:
+            {{- toYaml .Values.compliance.resources | nindent 12 }}
