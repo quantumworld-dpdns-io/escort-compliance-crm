@@ -6,20 +6,51 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
 
 # Build artifacts
 dist/
 build/
+target/
 __pycache__/
 *.pyc
 *.class
+bin/
 
 # Dependencies
 node_modules/
 vendor/
+.julia/
 
 # Environment
 .env
 .env.*
 !.env.example
-auto_commit.sh
+
+# Test results
+test-results/
+coverage/
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Secrets (never commit)
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+secrets.yaml
