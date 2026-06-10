@@ -1,0 +1,204 @@
+version: '3.8'
+
+services:
+  gateway:
+    build: services/gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DATABASE_URL=postgres://escort:escort@postgres:5432/escort_crm
+      - REDIS_URL=redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - escort-net
+
+  auth:
+    build: services/auth
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - DATABASE_URL=postgres://escort:escort@postgres:5432/escort_crm
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
+    depends_on:
+      - postgres
+    networks:
+      - escort-net
+
+  companion:
+    build: services/companion
+    ports:
+      - "8082:8082"
+    environment:
+      - PORT=8082
+      - DATABASE_URL=postgres://escort:escort@postgres:5432/escort_crm
+    depends_on:
+      - postgres
+    networks:
+      - escort-net
+
+  booking:
+    build: services/booking
+    ports:
+      - "8083:8083"
+    environment:
+      - PORT=8083
+      - DATABASE_URL=postgres://escort:escort@postgres:5432/escort_crm
+    depends_on:
+      - postgres
+    networks:
+      - escort-net
+
+  compliance:
+    build: services/compliance
+    ports:
+      - "8084:8084"
+    environment:
+      - PORT=8084
+      - DATABASE_URL=postgres://escort:escort@postgres:5432/escort_crm
+    depends_on:
+      - postgres
+    networks:
+      - escort-net
+
+  screening:
+    build: services/screening
+    ports:
+      - "8085:8085"
+    environment:
+      - PORT=8085
+      - DATABASE_URL=postgres://escort:escort@postgres:5432/escort_crm
+    depends_on:
+      - postgres
+    networks:
+      - escort-net
+
+  credentials:
+    build: services/credentials
+    ports:
+      - "8086:8086"
+    environment:
+      - PORT=8086
+      - DATABASE_URL=postgres://escort:escort@postgres:5432/escort_crm
+    depends_on:
+      - postgres
+    networks:
+      - escort-net
+
+  payments:
+    build: services/payments
+    ports:
+      - "8087:8087"
+    environment:
+      - PORT=8087
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - escort-net
+
+  messaging:
+    build: services/messaging
+    ports:
+      - "8088:8088"
+    environment:
+      - PORT=8088
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - escort-net
+
+  realtime:
+    build: services/realtime
+    ports:
+      - "8089:8089"
+    environment:
+      - PORT=8089
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - escort-net
+
+  quantum:
+    build: services/quantum
+    ports:
+      - "8090:8090"
+    environment:
+      - PORT=8090
+    networks:
+      - escort-net
+
+  ml:
+    build: services/ml
+    ports:
+      - "8091:8091"
+    environment:
+      - PORT=8091
+    networks:
+      - escort-net
+
+  data:
+    build: services/data
+    ports:
+      - "8092:8092"
+    environment:
+      - PORT=8092
+    networks:
+      - escort-net
+
+  crypto:
+    build: services/crypto
+    ports:
+      - "8093:8093"
+    environment:
+      - PORT=8093
+    networks:
+      - escort-net
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: escort
+      POSTGRES_PASSWORD: escort
+      POSTGRES_DB: escort_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - escort-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - escort-net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway
+    networks:
+      - escort-net
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  escort-net:
+    driver: bridge
